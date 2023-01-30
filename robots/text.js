@@ -1,12 +1,24 @@
 const wiki = require('wikipedia')
 const sentenceBoundaryDetection = require('sbd')
+const watsonApiKey = require('../credentials/watson-nlu.json').apikey
+
+const NaturalLanguageUnderstandingV1 = require('ibm-watson/natural-language-understanding/v1.js')
+const { IamAuthenticator } = require('ibm-watson/auth')
+
+const nlu = new NaturalLanguageUnderstandingV1({
+  authenticator: new IamAuthenticator({apikey: 'B3YzguGnixfugQVM6M18s6uL1UT6frUIG5nqgExTGmFa' }),
+  version: '2022-04-07',
+  serviceUrl: 'https://api.au-syd.natural-language-understanding.watson.cloud.ibm.com'
+})
 
 async function robot(content) {
 	
 	await fetchContentFromWikipedia(content)
 	sanitizeContent(content)
 	breakContentIntoSentences(content)
-	
+	limitMaximumSentences(content)
+	await fetchKeywordsOfAllSentences(content)
+
 	async function fetchContentFromWikipedia(content){
 		const pageContent = {}
 
@@ -65,6 +77,48 @@ async function robot(content) {
       			})
     		})
   	}
+
+	function limitMaximumSentences(content) {
+    		content.sentences = content.sentences.slice(0, content.maximumSentences)
+  	}
+
+  	async function fetchKeywordsOfAllSentences(content) {
+    		console.log('> [text-robot] Starting to fetch keywords from Watson')
+
+    		for (const sentence of content.sentences) {
+      			console.log(`> [text-robot] Sentence: "${sentence.text}"`)
+
+      			sentence.keywords = await fetchWatsonAndReturnKeywords(sentence.text)
+
+      			console.log(`> [text-robot] Keywords: ${sentence.keywords.join(', ')}\n`)
+    		}
+  	}	
+
+	async function fetchWatsonAndReturnKeywords(sentence) {
+
+		const analyzeParams = {
+  			'text': sentence,
+  			'features': {
+    				'keywords': {}
+  			}		
+		};
+
+    		return new Promise((resolve, reject) => {
+    			nlu.analyze(analyzeParams)
+  			.then(analysisResults => {
+    				//console.log(JSON.stringify(analysisResults, null, 2));
+  				const keywords = analysisResults.result.keywords.map((keyword) => {
+          				return keyword.text
+        			})
+
+        			resolve(keywords)
+			})
+  			.catch(err => {
+    				console.log('error:', err);
+  			});
+
+		})
+ 	}
 
 }
 

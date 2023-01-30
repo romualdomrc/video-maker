@@ -17,8 +17,10 @@
   },
   "homepage": "https://github.com/romualdomrc/video-maker#readme",
   "dependencies": {
+    "ibm-watson": "^7.1.2",
     "readline-sync": "^1.4.10",
     "sbd": "^1.0.19",
+    "watson-developer-cloud": "^4.0.1",
     "wikipedia": "^2.0.0"
   }
 }
